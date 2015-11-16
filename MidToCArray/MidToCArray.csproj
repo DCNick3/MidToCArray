@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CArrayMusic.cs" />
+    <Compile Include="MusicTwo.cs" />
     <Compile Include="Note.cs" />
     <Compile Include="NoteTwo.cs" />
     <Compile Include="Program.cs" />
