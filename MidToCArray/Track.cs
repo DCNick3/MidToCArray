@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace WaveToCArray
+namespace MidiToCArray
 {
     internal class Track
     {

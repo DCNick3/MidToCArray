@@ -1,12 +1,14 @@
 ﻿using NAudio.Midi;
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace WaveToCArray
+namespace MidiToCArray
 {
     public class MusicTwo
     {
@@ -114,11 +116,18 @@ namespace WaveToCArray
                 tracks.Add(track__);
             }
             for (int i = 0; i < tracks.Count; i++)
+            {
+                for (int ii = 0; ii < tracks[i].notes.Count; ii++)
+                {
+                    if (tracks[i].notes[ii].length == 0)
+                        tracks[i].notes.RemoveAt(ii);
+                }
                 if (tracks[i].notes.Count == 0)
                 {
                     tracks.RemoveAt(i);
                     i--;
                 }
+            }
 
 
 
@@ -128,7 +137,7 @@ namespace WaveToCArray
                 Track track = tracks[tracko];
                 TrackTwo nts = new TrackTwo();
                 NoteTwo ntt = new NoteTwo();
-                ntt.Frequency = 0;
+                ntt.Number = 0;
                 ntt.Length = 0;
                 nts.Notes.Add(ntt);
                 Note lastNote = (new Note());
@@ -152,7 +161,7 @@ namespace WaveToCArray
                         }
                     }
                     c1:
-                    if (nts.Notes.Last().Frequency == nowNote.frequency)
+                    if (nts.Notes.Last().Number == nowNote.number)
                     {
                         nts.Notes.Last().Length++;
                         continue;
@@ -160,7 +169,7 @@ namespace WaveToCArray
                     else
                     {
                         NoteTwo nttt = new NoteTwo();
-                        nttt.Frequency = nowNote.frequency;
+                        nttt.Number = nowNote.number;
                         nttt.Length = 1;
                         nttt.IsBass = isInstrumentBass(nowNote.instrument);
                         nts.Notes.Add(nttt);
@@ -170,7 +179,7 @@ namespace WaveToCArray
             }
             return music;
         }
-        
+
         private static bool isInstrumentBass(int i)
         {
             if ((i >= 32 && i <= 49) || (i >= 112 && i <= 119))
@@ -186,10 +195,66 @@ namespace WaveToCArray
         /// {name}.{trackNumber}.c
         /// </summary>
         /// <param name="name">Name without a extension</param>
-        public void SaveAsCFiles(string name)
+        public void SaveAsCFiles(string name, int version)
         {
             for (int i = 0; i < tracks.Count; i++)
-                File.WriteAllText(name + "." + i + ".c", tracks[i].ToCCode());
+                File.WriteAllText(name + "." + i + ".c", tracks[i].ToCCode(version));
+        }
+
+        private static void _Beep(int frequency, int duration)
+        {
+            WaveOut wo = new WaveOut();
+            SquareWaveProvider wp = new SquareWaveProvider();
+            if (frequency != 0)
+            {
+                wp.Frequency = frequency;
+                wo.Init(wp);
+                wo.Play();
+            }
+            Thread.Sleep(duration);
+            if (frequency != 0)
+                wo.Stop();
+            wo.Dispose();
+        }
+
+        private static void _PlayTrack(object _track)
+        {
+            PlayTrackArgument track = (PlayTrackArgument)_track;
+            track.start.WaitOne();
+            foreach (var note in track.track.Notes)
+                _Beep(note.Frequency, note.Length);
+        }
+
+        public void Play()
+        {
+            ManualResetEvent start = new ManualResetEvent(false);
+            Thread[] threads = new Thread[Tracks.Count];
+            for (int i = 0; i < Tracks.Count; i++)
+            {
+                var track = Tracks[i];
+                threads[i] = new Thread(_PlayTrack);
+                PlayTrackArgument a = new PlayTrackArgument();
+                a.start = start;
+                a.track = track;
+                threads[i].Start(a);
+            }
+            Thread.Sleep(100);
+            start.Set();
+            bool end = false;
+            while (!end)
+            {
+                end = true;
+                for (int i = 0; i < threads.Length; i++)
+                {
+                    end &= !threads[i].IsAlive;
+                }
+            }
+        }
+
+        internal class PlayTrackArgument
+        {
+            internal ManualResetEvent start;
+            internal TrackTwo track;
         }
     }
 }

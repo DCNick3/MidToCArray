@@ -7,8 +7,8 @@
     <ProjectGuid>{CC97A70B-54C5-49DE-A037-4E72F649E81E}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>WaveToCArray</RootNamespace>
-    <AssemblyName>WaveToCArray</AssemblyName>
+    <RootNamespace>MidiToCArray</RootNamespace>
+    <AssemblyName>MidiToCArray</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -52,6 +52,7 @@
     <Compile Include="NoteTwo.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SquareWaveProvider.cs" />
     <Compile Include="Track.cs" />
     <Compile Include="TrackTwo.cs" />
   </ItemGroup>

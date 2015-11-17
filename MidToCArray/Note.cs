@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace WaveToCArray
+namespace MidiToCArray
 {
     internal class Note
     {

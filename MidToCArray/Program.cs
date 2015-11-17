@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 using NAudio.Midi;
 using System.IO;
 using System.Threading;
+using NAudio.Wave;
 
-namespace WaveToCArray
+namespace MidiToCArray
 {
     class Program
     {
@@ -15,20 +16,26 @@ namespace WaveToCArray
         {
             Console.Write("Enter midi file name: ");
             string file = Console.ReadLine();
-            DoFileConvert(file);
-            Console.Write("Press any key to continue...");
-            Console.ReadKey();
-        }
-        
-        private static void DoFileConvert(string file)
-        {
+
             MidiFile midiFile = new MidiFile(file);
             Console.WriteLine("Converting...");
             TimeSpan startTime = TimeSpan.FromTicks(DateTime.Now.Ticks);
             MusicTwo music = MusicTwo.FromMidiFile(midiFile);
             Console.Write("Saving... ");
-            music.SaveAsCFiles(file);
+            music.SaveAsCFiles(file, 1);
             Console.WriteLine("Done in {0}!", TimeSpan.FromTicks(DateTime.Now.Ticks) - startTime);
+
+            ConsoleKeyInfo enteredKey;
+            do
+            {
+                Console.Write("Play track?(Y/N) ");
+                enteredKey = Console.ReadKey();
+                Console.WriteLine();
+            } while (enteredKey.KeyChar != 'Y' & enteredKey.KeyChar != 'N' & enteredKey.KeyChar != 'y' & enteredKey.KeyChar != 'n');
+            if (enteredKey.KeyChar == 'Y' || enteredKey.KeyChar == 'y')
+                music.Play();
+            Console.Write("Press any key to continue...");
+            Console.ReadKey();
         }
     }
 }

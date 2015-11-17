@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WaveToCArray
+namespace MidiToCArray
 {
     public class TrackTwo
     {
@@ -52,30 +52,43 @@ namespace WaveToCArray
         /// Converts track to C-code
         /// </summary>
         /// <returns>Converted C-code</returns>
-        public string ToCCode()
+        public string ToCCode(int version)
         {
-            StringBuilder cArray = new StringBuilder();
-            MemoryStream ms = new MemoryStream();
-            BinaryWriter bw = new BinaryWriter(ms);
-            for (int i = 0; i < notes.Count; i++)
+            if (version == 1 || version == 0)
             {
-                var ntn = notes[i];
-                bw.Write((ushort)ntn.Frequency);
-                bw.Write((ushort)ntn.Length);
+                StringBuilder cArray = new StringBuilder();
+                MemoryStream ms = new MemoryStream();
+                BinaryWriter bw = new BinaryWriter(ms);
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    var ntn = notes[i];
+                    if (version == 1)
+                        bw.Write((byte)ntn.Number);
+                    else
+                        bw.Write((ushort)ntn.Frequency);
+                    bw.Write((ushort)ntn.Length);
+                }
+                ms.Position = 0;
+                BinaryReader br = new BinaryReader(ms);
+                cArray.Append("//Music start!\n");
+                cArray.Append(string.Format("#define MUSIC_LENGTH {0}\n", notes.Count));
+                cArray.Append("const PROGMEM uint8_t music[] = { ");
+                cArray.Append(version);
+                if (version == 1)
+                    for (int i = 0; i < notes.Count * 3; i++)
+                    {
+                        cArray.Append(string.Format(", {0}", br.ReadByte()));
+                    }
+                else
+                    for (int i = 0; i < notes.Count * 2; i++)
+                    {
+                        cArray.Append(string.Format(", {0}", br.ReadByte()));
+                        cArray.Append(string.Format(", {0}", br.ReadByte()));
+                    }
+                cArray.Append("};\n\n//Music end!");
+                return cArray.ToString();
             }
-            ms.Position = 0;
-            BinaryReader br = new BinaryReader(ms);
-            cArray.Append("//Music start!\n");
-            cArray.Append(string.Format("#define MUSIC_LENGTH {0}\n", notes.Count));
-            cArray.Append("const PROGMEM uint16_t music[] = { ");
-            cArray.Append(br.ReadInt16());
-            cArray.Append(string.Format(", {0}", br.ReadInt16()));
-            for (int i = 2; i < notes.Count * 2; i++)
-            {
-                cArray.Append(string.Format(", {0}", br.ReadInt16()));
-            }
-            cArray.Append("};\n\n//Music end!");
-            return cArray.ToString();
+            return null;
         }
     }
 }
