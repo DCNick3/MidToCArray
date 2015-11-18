@@ -48,15 +48,83 @@ namespace MidiToCArray
             return string.Format("NotesCount: {0}, Length: {1}", notes.Count, Length);
         }
 
+        class NoteTwoCount : IComparable
+        {
+            internal int length;
+            internal int number;
+            internal bool isBass;
+            internal int count;
+            internal bool isEqual(NoteTwo nt)
+            {
+                return (nt.IsBass == isBass)&(nt.Length == length)&(nt.Number == number);
+            }
+
+            public int CompareTo(object obj)
+            {
+                return count.CompareTo(((NoteTwoCount)obj).count);
+            }
+        }
+
+        /// <summary>
+        /// Converts track to C-code
+        /// selects version automatically
+        /// </summary>
+        /// <returns>Converted C-code</returns>
+        public string ToCCodeBest()
+        {
+            List<byte[]> converted = new List<byte[]>();
+            for (int i = 0; i < 6; i++)
+            {
+                converted.Add(GetAsByteArray(i));
+            }
+            int smallestI = -1;
+            int smallest = int.MaxValue;
+            for (int i = 0; i < converted.Count; i++)
+            {
+                if (converted[i].Length < smallest)
+                {
+                    smallest = converted[i].Length;
+                    smallestI = i;
+                }
+            }
+            return ToCCode(smallestI);
+        }
+
         /// <summary>
         /// Converts track to C-code
         /// </summary>
+        /// <param name="version">Version to use</param>
         /// <returns>Converted C-code</returns>
         public string ToCCode(int version)
         {
+            StringBuilder cArray = new StringBuilder();
+            MemoryStream ms = new MemoryStream(GetAsByteArray(version));
+            BinaryReader br = new BinaryReader(ms);
+            cArray.Append("//Music start!\n");
+            cArray.Append(string.Format("#define MUSIC_LENGTH {0}\n", notes.Count));
+            cArray.Append("const PROGMEM uint8_t music[] = { ");
+            cArray.Append(version);
+            for (int i = 0; i < ms.Length; i++)
+            {
+                cArray.Append(string.Format(", {0}", br.ReadByte()));
+            }
+            cArray.Append("};\n\n//Music end!");
+            return cArray.ToString();
+        }
+
+        /// <summary>
+        /// Converts track to byte array of specified version
+        /// Versions:
+        /// 0 - Biggest and basic, codes frequency and duration
+        /// 1 - Some optimization, codes note number and duration
+        /// 2 - With dictionary with size of 120, good in big files
+        /// </summary>
+        /// <param name="version">Version of file</param>
+        /// <returns>Created file without header</returns>
+        private byte[] GetAsByteArray(int version)
+        {
             if (version == 1 || version == 0)
             {
-                StringBuilder cArray = new StringBuilder();
                 MemoryStream ms = new MemoryStream();
                 BinaryWriter bw = new BinaryWriter(ms);
                 for (int i = 0; i < notes.Count; i++)
@@ -68,25 +136,76 @@ namespace MidiToCArray
                         bw.Write((ushort)ntn.Frequency);
                     bw.Write((ushort)ntn.Length);
                 }
-                ms.Position = 0;
-                BinaryReader br = new BinaryReader(ms);
-                cArray.Append("//Music start!\n");
-                cArray.Append(string.Format("#define MUSIC_LENGTH {0}\n", notes.Count));
-                cArray.Append("const PROGMEM uint8_t music[] = { ");
-                cArray.Append(version);
-                if (version == 1)
-                    for (int i = 0; i < notes.Count * 3; i++)
+                return ms.ToArray();
+            }
+            if (version == 2 | version == 3 | version == 4 | version == 5)
+            {
+                MemoryStream ms = new MemoryStream();
+                BinaryWriter bw = new BinaryWriter(ms);
+                List<NoteTwoCount> dictionary = new List<NoteTwoCount>();
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    var ntn = notes[i];
+                    for (int ii = 0; ii < dictionary.Count; ii++)
+                        if (dictionary[ii].isEqual(ntn))
+                        {
+                            dictionary[ii].count++;
+                            goto ex0;
+                        }
+                    var ntctmp = new NoteTwoCount();
+                    ntctmp.length = ntn.Length;
+                    ntctmp.number = ntn.Number;
+                    ntctmp.isBass = ntn.IsBass;
+                    ntctmp.count = 1;
+                    dictionary.Add(ntctmp);
+                    ex0: { }
+                }
+                dictionary.Sort();
+                dictionary.Reverse();
+                int dictLen = 0;
+                if (version == 2)
+                    dictLen = 128;
+                if (version == 3)
+                    dictLen = 64;
+                if (version == 4)
+                    dictLen = 32;
+                if (version == 5)
+                    dictLen = 16;
+                for (int i = 0; i < dictLen; i++) //Filling dictionary
+                {
+                    if (i < dictionary.Count)
                     {
-                        cArray.Append(string.Format(", {0}", br.ReadByte()));
+                        bw.Write((byte)dictionary[i].number);
+                        bw.Write((ushort)dictionary[i].length);
                     }
-                else
-                    for (int i = 0; i < notes.Count * 2; i++)
+                    else
                     {
-                        cArray.Append(string.Format(", {0}", br.ReadByte()));
-                        cArray.Append(string.Format(", {0}", br.ReadByte()));
+                        bw.Write((byte)0);
+                        bw.Write((ushort)0);
                     }
-                cArray.Append("};\n\n//Music end!");
-                return cArray.ToString();
+                }
+                if (dictionary.Count > dictLen)
+                {
+                    for (int i = dictLen; i < dictionary.Count; i++)
+                    {
+                        dictionary.RemoveAt(i);
+                        i--;
+                    }
+                }
+                for (int i = 0; i < notes.Count; i++)
+                {
+                    var ntn = notes[i];
+                    for (int ii = 0; ii < dictionary.Count; ii++)
+                        if (dictionary[ii].isEqual(ntn))
+                        {
+                            bw.Write((byte)((byte)ii + (byte)0x80));
+                            goto ex1;
+                        }
+                    bw.Write((byte)ntn.Number);
+                    bw.Write((ushort)ntn.Length);
+                    ex1: { }
+                }
+                return ms.ToArray();
             }
             return null;
         }

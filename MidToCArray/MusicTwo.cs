@@ -195,10 +195,26 @@ namespace MidiToCArray
         /// {name}.{trackNumber}.c
         /// </summary>
         /// <param name="name">Name without a extension</param>
+        /// <param name="version">Version of file to save</param>
         public void SaveAsCFiles(string name, int version)
         {
             for (int i = 0; i < tracks.Count; i++)
                 File.WriteAllText(name + "." + i + ".c", tracks[i].ToCCode(version));
+        }
+
+        /// <summary>
+        /// Saves music as multiplue C files
+        /// Makes one file for each track
+        /// Names it by mask:
+        /// {name}.{trackNumber}.c
+        /// 
+        /// Selects version automatically
+        /// </summary>
+        /// <param name="name">Name without a extension</param>
+        public void SaveAsCFilesBest(string name)
+        {
+            for (int i = 0; i < tracks.Count; i++)
+                File.WriteAllText(name + "." + i + ".c", tracks[i].ToCCodeBest());
         }
 
         private static void _Beep(int frequency, int duration)

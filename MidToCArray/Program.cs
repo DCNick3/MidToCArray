@@ -22,7 +22,7 @@ namespace MidiToCArray
             TimeSpan startTime = TimeSpan.FromTicks(DateTime.Now.Ticks);
             MusicTwo music = MusicTwo.FromMidiFile(midiFile);
             Console.Write("Saving... ");
-            music.SaveAsCFiles(file, 1);
+            music.SaveAsCFilesBest(file);
             Console.WriteLine("Done in {0}!", TimeSpan.FromTicks(DateTime.Now.Ticks) - startTime);
 
             ConsoleKeyInfo enteredKey;
